@@ -1,0 +1,98 @@
+name: Deploy to GitHub Pages
+
+# This repo stores the mobile fork as a patch: upstream
+# dorianbayart/pixel-fortress at pinned commit 41dbece + fork.patch (the
+# mobile changes) are assembled by CI, so no upstream code or binary assets
+# are committed here. The patched tree is deployed to GitHub Pages.
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch upstream (pinned commit) and apply fork.patch
+        run: |
+          set -eu
+          UPSTREAM=https://github.com/dorianbayart/pixel-fortress.git
+          PIN=41dbece4287080da01ccb8e77a734ae1a380ecf0
+          git init /tmp/upstream
+          cd /tmp/upstream
+          git remote add origin "$UPSTREAM"
+          git fetch --depth 1 origin "$PIN"
+          git checkout -q FETCH_HEAD
+          git apply --check "$GITHUB_WORKSPACE/fork.patch"
+          git apply "$GITHUB_WORKSPACE/fork.patch"
+          echo "patched tree ready: $(find . -type f | wc -l) files"
+
+      - name: Assemble site
+        run: |
+          set -eu
+          mkdir _site
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='scripts' \
+            --exclude='plans' \
+            --exclude='docs' \
+            --exclude='voxel-test' \
+            --exclude='CLAUDE.md' \
+            --exclude='GEMINI.md' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='*.template.html' \
+            --exclude='build' \
+            /tmp/upstream/ _site/
+          touch _site/.nojekyll
+          # Sanity check: the deployed build must be the MOBILE build
+          for f in index.html play.html main.js preload.js sw.js manifest.json \
+                   js/index.mjs js/ui.mjs js/mouse.mjs js/constants.mjs \
+                   css/game-ui.css css/menu.css locales/en.json \
+                   campaigns/01_tutorial.json maps/seeds.json \
+                   lib/pixi.min.mjs favicon.png \
+                   assets/punyworld-overworld-tileset.png \
+                   assets/fonts/Jacquarda-Bastarda-9.woff2; do
+            test -f "_site/$f" || { echo "MISSING $f"; exit 1; }
+          done
+          grep -q 'build-confirm-bar' _site/play.html \
+            || { echo "play.html lacks the mobile build confirm bar"; exit 1; }
+          grep -q 'TOUCH_SLOP' _site/js/constants.mjs \
+            || { echo "constants.mjs lacks the mobile touch config"; exit 1; }
+          grep -q 'camera-home-btn' _site/css/game-ui.css \
+            || { echo "css lacks the camera home button"; exit 1; }
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
