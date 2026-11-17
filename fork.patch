@@ -1,0 +1,1206 @@
+diff --git a/css/game-ui.css b/css/game-ui.css
+index d7f6b31..b11ab7e 100644
+--- a/css/game-ui.css
++++ b/css/game-ui.css
+@@ -654,16 +654,110 @@ body.minimap-minimized #objectives-panel {
+   color: #fff;
+ }
+ 
++/* ── Build confirm bar (mobile two-phase placement) ────────────────── */
++/* On touch devices the ghost building snaps to the tile under the
++   screen center; these two buttons confirm or cancel the placement. */
++
++#build-confirm-bar {
++  display: none;
++  flex: 1;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  padding: 6px;
++  flex-wrap: wrap;
++}
++
++body.build-mode #build-confirm-bar {
++  display: flex;
++}
++
++body.build-mode #building-slots-panel {
++  display: none;
++}
++
++body.build-mode #building-info-panel {
++  display: none !important;
++}
++
++.bcb-btn {
++  background: rgba(0, 100, 0, 0.85);
++  border: 2px solid rgba(255, 215, 0, 0.9);
++  border-radius: 6px;
++  color: #fff;
++  font-family: system-ui, sans-serif;
++  font-size: 15px;
++  font-weight: bold;
++  cursor: pointer;
++  padding: 10px 18px;
++  min-width: 120px;
++  height: 46px;
++}
++
++.bcb-btn:active {
++  background: rgba(34, 139, 34, 0.95);
++}
++
++.bcb-btn:disabled {
++  opacity: 0.4;
++  cursor: not-allowed;
++}
++
++.bcb-cancel {
++  background: rgba(80, 80, 80, 0.85);
++  border-color: rgba(180, 180, 180, 0.8);
++}
++
++.bcb-status {
++  flex-basis: 100%;
++  text-align: center;
++  color: #FFD700;
++  font-size: 12px;
++  font-family: system-ui, sans-serif;
++  min-height: 14px;
++  line-height: 1.2;
++}
++
++/* ── Camera home button (mobile) ─────────────────────────────── */
++
++#camera-home-btn {
++  position: absolute;
++  left: -46px;
++  bottom: 0;
++  width: 40px;
++  height: 40px;
++  background: rgba(17, 70, 17, 0.85);
++  border: 1px solid rgba(255, 215, 0, 0.6);
++  border-radius: 6px;
++  color: #FFD700;
++  font-size: 20px;
++  line-height: 1;
++  cursor: pointer;
++  display: none;
++  align-items: center;
++  justify-content: center;
++}
++
++#camera-home-btn:active {
++  background: rgba(34, 139, 34, 0.95);
++}
++
+ /* ── Mobile ───────────────────────────────────────────────────── */
+ 
+ @media (max-width: 600px), (max-height: 600px) {
++  /* Bottom bar height is content-driven: it grows when the building
++     info panel (long-press) or the build confirm bar opens. The real
++     height is published to the canvas layout via --hud-bottom. */
+   #game-bottom-bar {
+-    height: 56px;
++    height: auto;
++    min-height: 56px;
++    align-items: center;
+   }
+ 
+   #building-slots-panel {
+     padding: 4px;
+     gap: 4px;
++    min-height: 56px;
+   }
+ 
+   .building-slot {
+@@ -686,8 +780,8 @@ body.minimap-minimized #objectives-panel {
+   }
+ 
+   #minimap-container {
+-    width: 172px;
+-    height: 172px;
++    width: 150px;
++    height: 150px;
+   }
+ 
+   body.minimap-minimized #minimap-container {
+@@ -695,6 +789,10 @@ body.minimap-minimized #objectives-panel {
+     height: 86px;
+   }
+ 
++  #camera-home-btn {
++    display: flex;
++  }
++
+   #objectives-panel {
+     top: 31px;
+     left: -1px;
+@@ -709,7 +807,61 @@ body.minimap-minimized #objectives-panel {
+     max-height: calc(100dvh - 33px - 56px);
+   }
+ 
++  /* Building info panel (long-press details) — stacked, readable rows */
++  #building-info-panel {
++    flex-wrap: wrap;
++    padding: 6px 8px;
++    row-gap: 4px;
++    align-content: flex-start;
++  }
++
++  .bi-icon {
++    width: 36px;
++    height: 36px;
++  }
++
++  .bi-main {
++    flex-basis: calc(100% - 48px);
++    min-width: 0;
++  }
++
++  .bi-desc {
++    font-size: 12px;
++  }
++
++  .bi-actions {
++    margin-left: 0;
++    flex-wrap: wrap;
++    row-gap: 4px;
++    padding: 0;
++  }
++
++  .bi-btn {
++    height: 48px;
++    min-width: 96px;
++    max-width: none;
++    font-size: 11px;
++  }
++
++  .bi-btn-title {
++    font-size: 13px;
++  }
++
++  .bi-btn-sub,
++  .bi-btn-cost-item {
++    font-size: 10px;
++  }
++
++  .bi-btn-icon {
++    width: 24px;
++    height: 24px;
++  }
++
++  .bi-back-btn {
++    height: 48px;
++  }
++
+   #narrative-box {
+-    bottom: 64px; /* 56px bottom bar + 8px gap */
++    bottom: calc(var(--hud-bottom, 56px) + 8px);
+   }
+ }
+diff --git a/css/menu.css b/css/menu.css
+index c1e9d80..88e97c6 100644
+--- a/css/menu.css
++++ b/css/menu.css
+@@ -104,8 +104,9 @@ body.playing-mode {
+ }
+ 
+ body.playing-mode #canvas {
+-  top: 32px;
+-  height: calc(100dvh - 32px - 72px);
++  /* HUD bar heights are published by dimensions.mjs as CSS variables */
++  top: var(--hud-top, 32px);
++  height: calc(100dvh - var(--hud-top, 32px) - var(--hud-bottom, 72px));
+ }
+ 
+ #stats {
+@@ -274,6 +275,6 @@ body.playing-mode #canvas {
+ 
+ @media (max-width: 600px), (max-height: 600px) {
+   body.playing-mode #canvas {
+-    height: calc(100dvh - 32px - 56px);
++    height: calc(100dvh - var(--hud-top, 32px) - var(--hud-bottom, 56px));
+   }
+ }
+\ No newline at end of file
+diff --git a/de/index.html b/de/index.html
+index a128742..3687e09 100644
+--- a/de/index.html
++++ b/de/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+<body>
+  <!-- Navigation Bar (Sticky) -->
+diff --git a/es/index.html b/es/index.html
+index 455cb25..4929aee 100644
+--- a/es/index.html
++++ b/es/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+<body>
+  <!-- Navigation Bar (Sticky) -->
+diff --git a/fr/index.html b/fr/index.html
+index 2c8a74c..acc6935 100644
+--- a/fr/index.html
++++ b/fr/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+<body>
+  <!-- Navigation Bar (Sticky) -->
+diff --git a/index.html b/index.html
+index 42c3033..09f76b5 100644
+--- a/index.html
++++ b/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+<body>
+  <!-- Navigation Bar (Sticky) -->
+diff --git a/js/audio.mjs b/js/audio.mjs
+index 253dc44..32ace1b 100644
+--- a/js/audio.mjs
++++ b/js/audio.mjs
+@@ -27,9 +27,12 @@ const buildingSound = new Audio('assets/sounds/Chest Close 2.ogg')
+ 
+ /* Ambient */
+ const forestDayAmbient = new Audio('assets/sounds/Forest Day.ogg')
++// Mobile: don't let the browser prefetch big audio blobs — they stream on first play()
++forestDayAmbient.preload = 'none'
+ 
+ /* Music */
+ const sonatina_letsadventure_3ToArms = new Audio('assets/music/sonatina_letsadventure_3ToArms.ogg')
++sonatina_letsadventure_3ToArms.preload = 'none'
+ 
+ // Initialize volumes from gameState
+ clickSound.volume = gameState.sfxVolume
+diff --git a/js/constants.mjs b/js/constants.mjs
+index e58857f..2ca1b47 100644
+--- a/js/constants.mjs
++++ b/js/constants.mjs
+@@ -6,6 +6,11 @@ export default {
+         TOP_BAR_HEIGHT: 32,
+         BOTTOM_BAR_HEIGHT: 72,
+         BOTTOM_BAR_HEIGHT_MOBILE: 56,
++        // Touch detection (shared across modules: input pipeline, HUD, pause behaviour)
++        IS_TOUCH: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
++        // Touch gesture thresholds (px / ms) — see mobile design doc
++        TOUCH_SLOP: 8,
++        LONG_PRESS_MS: 350,
+         FONTS: {
+             PRIMARY: "system-ui, 'Open Sans', Arial, sans-serif",
+             MONOSPACE: "monospace, 'Courier New', Courier, sans-serif",
+@@ -31,7 +36,8 @@ export default {
+         },
+         // Mouse/Camera zoom (for viewport control)
+         CAMERA: {
+-            TILES: window.innerWidth <= 600 || window.innerHeight <= 600 ? 10 : 16,
++            // Small screens (phones): show ~12 tiles on the short edge (≥24 CSS px per tile)
++            TILES: window.innerWidth <= 600 || window.innerHeight <= 600 ? 12 : 16,
+             FACTOR: 0.05,
+             MAX: 6,
+             MIN: 1,
+diff --git a/js/dimensions.mjs b/js/dimensions.mjs
+index 0f04d86..f7ac32f 100644
+--- a/js/dimensions.mjs
++++ b/js/dimensions.mjs
+@@ -63,17 +63,30 @@ const updateDimensions = async () => {
+     dpr = (window.devicePixelRatio || 1)
+ 
+     const isPlaying = gameState.gameStatus === 'playing' || gameState.gameStatus === 'paused'
+-    const topH = isPlaying ? CONSTANTS.UI.TOP_BAR_HEIGHT : 0
+     const isMobile = window.innerWidth <= 600 || window.innerHeight <= 600
+-    const bottomH = isPlaying ? (isMobile ? CONSTANTS.UI.BOTTOM_BAR_HEIGHT_MOBILE : CONSTANTS.UI.BOTTOM_BAR_HEIGHT) : 0
++
++    // Measure the real HUD bars — their height is dynamic on mobile
++    // (bottom bar grows when the building info panel / build confirm bar opens).
++    const topBarEl = document.getElementById('game-top-bar')
++    const bottomBarEl = document.getElementById('game-bottom-bar')
++    let topH = 0
++    let bottomH = 0
++    if (isPlaying) {
++      topH = topBarEl?.offsetHeight || CONSTANTS.UI.TOP_BAR_HEIGHT
++      bottomH = bottomBarEl?.offsetHeight ||
++        (isMobile ? CONSTANTS.UI.BOTTOM_BAR_HEIGHT_MOBILE : CONSTANTS.UI.BOTTOM_BAR_HEIGHT)
++    }
++
++    // Keep the CSS canvas layout in sync (menu.css uses these variables)
++    document.documentElement.style.setProperty('--hud-top', `${topH}px`)
++    document.documentElement.style.setProperty('--hud-bottom', `${bottomH}px`)
+ 
+     // Store canvas dimensions in pixels
+     canvasWidth = window.innerWidth
+     canvasHeight = window.innerHeight - topH - bottomH
+ 
+     // Log new dimensions for debugging
+-    console.log(`Canvas: ${canvasWidth} x ${canvasHeight} pixels`)
+-    console.log(`Viewport: ${window.innerWidth} x ${window.innerHeight} pixels (DPR: ${dpr})`)
++    // console.log(`Canvas: ${canvasWidth} x ${canvasHeight} pixels`)
+ 
+     return { width: canvasWidth, height: canvasHeight, dpr: dpr }
+ }
+diff --git a/js/minimap.mjs b/js/minimap.mjs
+index 9bedda3..4a3a2dc 100644
+--- a/js/minimap.mjs
++++ b/js/minimap.mjs
+@@ -20,6 +20,9 @@ let offCtx = null
+ let lastContentUpdate = 0
+ let _minimapToggleHandler = null
+ let _minimapContainerHandler = null
++// Map window currently shown on the minimap (set in updateMinimapContent,
++// used to convert a tap into map coordinates)
++let _mmOrigin = { startX: 0, startY: 0, tilesX: 1, tilesY: 1 }
+ 
+ function hexToRgba(hex, alpha = 1) {
+   const r = (hex >> 16) & 0xff
+@@ -61,13 +64,23 @@ function initMinimap() {
+     toggleBtn.addEventListener('click', _minimapToggleHandler)
+   }
+ 
+-  // Mobile only: click anywhere on the minimap container to minimize/expand
++  // Mobile: tap the minimap — first tap expands it if minimized,
++  // otherwise the camera jumps to the tapped map position.
+   const container = document.getElementById('minimap-container')
+   if (container) {
+     if (_minimapContainerHandler) container.removeEventListener('click', _minimapContainerHandler)
+-    _minimapContainerHandler = () => {
++    _minimapContainerHandler = (e) => {
+       if (window.matchMedia('(max-width: 600px), (max-height: 600px)').matches) {
+-        document.body.classList.toggle('minimap-minimized')
++        if (document.body.classList.contains('minimap-minimized')) {
++          document.body.classList.remove('minimap-minimized')
++          return
++        }
++        // Expanded: jump the camera to the tapped position
++        const rect = mainCanvas.getBoundingClientRect()
++        if (rect.width <= 0 || rect.height <= 0) return
++        const fx = (e.clientX - rect.left) / rect.width
++        const fy = (e.clientY - rect.top) / rect.height
++        jumpToFraction(fx, fy)
+       }
+     }
+     container.addEventListener('click', _minimapContainerHandler)
+@@ -81,6 +94,21 @@ function initMinimap() {
+   console.log('Minimap initialized')
+ }
+ 
++
++/**
++ * Jump the camera to the map position matching a minimap tap fraction.
++ * @param {number} fx - 0..1 across the minimap canvas
++ * @param {number} fy - 0..1 down the minimap canvas
++ */
++function jumpToFraction(fx, fy) {
++  const mouseCtl = gameState.UI?.mouse
++  if (!mouseCtl || !gameState.map) return
++  const tileSize = getTileSize()
++  const tileX = _mmOrigin.startX + Math.max(0, Math.min(1, fx)) * _mmOrigin.tilesX
++  const tileY = _mmOrigin.startY + Math.max(0, Math.min(1, fy)) * _mmOrigin.tilesY
++  mouseCtl.jumpToWorld(tileX * tileSize, tileY * tileSize)
++}
++
+ /**
+  * Update the minimap display — called every frame.
+  * Content (terrain/buildings/units) is throttled; viewport rect updates every frame.
+@@ -128,6 +156,13 @@ function updateMinimapContent() {
+   const endX = Math.min(mapWidth, startX + minimapTilesWidth)
+   const endY = Math.min(mapHeight, startY + minimapTilesHeight)
+ 
++  _mmOrigin = {
++    startX,
++    startY,
++    tilesX: Math.max(1, endX - startX),
++    tilesY: Math.max(1, endY - startY)
++  }
++
+   offCtx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE)
+   offCtx.globalAlpha = MINIMAP_CONTENT_ALPHA
+ 
+diff --git a/js/mouse.mjs b/js/mouse.mjs
+index e10dfad..201c115 100644
+--- a/js/mouse.mjs
++++ b/js/mouse.mjs
+@@ -140,7 +140,55 @@ class Mouse {
+     // Setup event listeners for Pixi.js view
+     const pixiView = app.canvas;
+     
++    // Shared tap/long-press selection logic (mouse pointerup + touch pipeline)
++    this._selectBuildingAtTile = () => {
++      if (this.x == null || this.y == null) return
++      const tile = gameState.map?.[this.x]?.[this.y]
++      const clickedBuilding = tile?.building
++
++      if (clickedBuilding?.owner.type === 'human') {
++        // If another building was selected, unselect it
++        if (gameState.selectedBuilding && gameState.selectedBuilding !== clickedBuilding) {
++          gameState.selectedBuilding.selected = false
++        }
++        // Toggle selection of the clicked building
++        clickedBuilding.selected = !clickedBuilding.selected
++        gameState.selectedBuilding = clickedBuilding.selected ? clickedBuilding : null
++      } else if (gameState.selectedBuilding) {
++        // If no building was clicked, unselect the current one
++        gameState.selectedBuilding.selected = false
++        gameState.selectedBuilding = null
++      }
++    }
++
++    // Long-press: open the details of the building under the finger
++    this._cancelLongPress = () => {
++      if (this._longPressTimer) {
++        clearTimeout(this._longPressTimer)
++        this._longPressTimer = null
++      }
++    }
++
++    this._startLongPress = () => {
++      this._cancelLongPress()
++      this._longPressFired = false
++      this._longPressTimer = setTimeout(() => {
++        if (this._touchMoved || this.isPinching || gameState.gameStatus !== 'playing') return
++        this._longPressFired = true
++        this._needWorldCoords = true
++        this.updatePosition(this.lastX, this.lastY)
++        this._selectBuildingAtTile()
++        if (navigator.vibrate) navigator.vibrate(10)
++      }, CONSTANTS.UI.LONG_PRESS_MS)
++    }
++
++    // Touch gesture state
++    this._touchMoved = false
++    this._longPressFired = false
++    this._longPressTimer = null
++
+     pixiView.addEventListener('pointerdown', (e) => {
++      if (e.pointerType === 'touch') return // touch has its own pipeline below
+       if (e.button === 0) { // Primary button
+         this.isDragging = true
+         this.dragStartX = e.clientX
+@@ -163,6 +211,7 @@ class Mouse {
+     })
+ 
+     pixiView.addEventListener('pointerup', (e) => {
++      if (e.pointerType === 'touch') return // touch has its own pipeline below
+       if (e.button === 0) { // Primary button
+         // If barely moved, treat as a click
+         const dx = Math.abs(e.clientX - this.dragStartX)
+@@ -171,22 +220,7 @@ class Mouse {
+             this.clicked = true
+ 
+             // Handle building selection
+-            const tile = gameState.map[this.x][this.y]
+-            const clickedBuilding = tile?.building
+-
+-            if (clickedBuilding?.owner.type === 'human') {
+-                // If another building was selected, unselect it
+-                if (gameState.selectedBuilding && gameState.selectedBuilding !== clickedBuilding) {
+-                    gameState.selectedBuilding.selected = false
+-                }
+-                // Toggle selection of the clicked building
+-                clickedBuilding.selected = !clickedBuilding.selected
+-                gameState.selectedBuilding = clickedBuilding.selected ? clickedBuilding : null
+-            } else if (gameState.selectedBuilding) {
+-                // If no building was clicked, unselect the current one
+-                gameState.selectedBuilding.selected = false
+-                gameState.selectedBuilding = null
+-            }
++            this._selectBuildingAtTile()
+         } else {
+           // Enable momentum scrolling if we were dragging with significant velocity
+           const dragSpeed = Math.sqrt(this.dragVelocity.x * this.dragVelocity.x + this.dragVelocity.y * this.dragVelocity.y)
+@@ -254,6 +288,7 @@ class Mouse {
+ 
+     // Mouse move event
+     pixiView.addEventListener('pointermove', (e) => {
++      if (e.pointerType === 'touch') return // touch has its own pipeline below
+       // Handle dragging (panning the view)
+       if (this.isDragging) {
+         const now = performance.now()
+@@ -290,22 +325,26 @@ class Mouse {
+       e.preventDefault()
+ 
+       // Get position of touch
+-      const touchX = e.touches[0].clientX
+-      const touchY = e.touches[0].clientY
+-
+       if (e.touches.length === 1) { // Single finger touch
+-        this.isDragging = true
+-        this.dragStartX = e.touches[0].clientX
+-        this.dragStartY = e.touches[0].clientY
+-        this.lastX = e.touches[0].clientX
+-        this.lastY = e.touches[0].clientY
++        const touch = e.touches[0]
++        this.isDragging = false // panning only starts after the slop threshold
++        this._touchMoved = false
++        this._longPressFired = false
++        this.isDraggingMomentum = false
++        this.dragStartX = touch.clientX
++        this.dragStartY = touch.clientY
++        this.lastX = touch.clientX
++        this.lastY = touch.clientY
+         this._needWorldCoords = true
+-        this.updatePosition(e.touches[0].clientX, e.touches[0].clientY)
++        this.updatePosition(touch.clientX, touch.clientY)
++        this._startLongPress()
+       } else if (e.touches.length === 2) { // Two fingers (pinch)
+         this.isPinching = true
+         this.isDragging = false
++        this._touchMoved = true // a pinch is never a click
++        this._cancelLongPress()
+         this.prevDistance = distanceBetweenTouches(e.touches[0], e.touches[1])
+-        
++
+         // Calculate pinch center
+         const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+         const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+@@ -318,25 +357,54 @@ class Mouse {
+     pixiView.addEventListener('touchmove', (e) => {
+       e.preventDefault()
+ 
+-      if (e.touches.length === 1 && this.isDragging) { // Single finger move
++      if (e.touches.length === 1) { // Single finger move
++        const touch = e.touches[0]
++
++        // Slop: ignore micro-movements so taps stay taps
++        const moveDx = Math.abs(touch.clientX - this.dragStartX)
++        const moveDy = Math.abs(touch.clientY - this.dragStartY)
++        if (!this._touchMoved && moveDx < CONSTANTS.UI.TOUCH_SLOP && moveDy < CONSTANTS.UI.TOUCH_SLOP) {
++          return
++        }
++
++        if (!this._touchMoved) {
++          // First time past the slop: this gesture becomes a drag
++          this._touchMoved = true
++          this.isDragging = true
++          this._cancelLongPress()
++          this.previousDragPosition = { x: this.lastX, y: this.lastY }
++          this.dragTime = performance.now()
++        }
++
++        const now = performance.now()
++        const dt = now - this.dragTime
++
++        // Track velocity for release momentum (same units as the mouse path)
++        if (dt > 0) {
++          this.dragVelocity.x = (touch.clientX - this.previousDragPosition.x) / dt * 16
++          this.dragVelocity.y = (touch.clientY - this.previousDragPosition.y) / dt * 16
++          this.previousDragPosition = { x: touch.clientX, y: touch.clientY }
++          this.dragTime = now
++        }
++
+         // Calculate drag distance
+-        const dx = (e.touches[0].clientX - this.lastX) / this.viewTransform.scale
+-        const dy = (e.touches[0].clientY - this.lastY) / this.viewTransform.scale
+-        
++        const dx = (touch.clientX - this.lastX) / this.viewTransform.scale
++        const dy = (touch.clientY - this.lastY) / this.viewTransform.scale
++
+         // Update view offset
+         this.viewTransform.x -= dx
+         this.viewTransform.y -= dy
+-        
++
+         // Apply boundary constraints
+         this.applyBoundaryConstraints()
+ 
+         // Store current position
+-        this.lastX = e.touches[0].clientX
+-        this.lastY = e.touches[0].clientY
+-        
++        this.lastX = touch.clientX
++        this.lastY = touch.clientY
++
+         // Update mouse position and flag changes
+         this._needWorldCoords = true
+-        this.updatePosition(e.touches[0].clientX, e.touches[0].clientY)
++        this.updatePosition(touch.clientX, touch.clientY)
+         this.zoomChanged = true
+       } else if (e.touches.length === 2 && this.isPinching) { // Pinch zoom
+         // Calculate new distance between touches
+@@ -389,31 +457,47 @@ class Mouse {
+     // Touch end event
+     pixiView.addEventListener('touchend', (e) => {
+       e.preventDefault()
+-      
++      this._cancelLongPress()
++
+       if (e.touches.length < 2) {
+         this.isPinching = false
+       }
+-      
+-      if (e.touches.length === 0) {
+-        // If touching a UI element
+-        if (e.changedTouches.length > 0) {
+-          const touchX = e.changedTouches[0].clientX
+-          const touchY = e.changedTouches[0].clientY
+-
+-          const dx = Math.abs(touchX - this.dragStartX)
+-          const dy = Math.abs(touchY - this.dragStartY)
+
+n-          // If barely moved, treat as a click
+-          if (dx < 10 && dy < 10) {
+-            this.clicked = true
+-            this._needWorldCoords = true
+-            this.updatePosition(touchX, touchY)
++      if (e.touches.length === 0) {
++        const touch = e.changedTouches[0]
++
++        if (!this._touchMoved && !this._longPressFired && touch) {
++          // Tap (movement stayed under the slop threshold)
++          this.clicked = true
++          this._needWorldCoords = true
++          this.updatePosition(touch.clientX, touch.clientY)
++          this._selectBuildingAtTile()
++        } else if (this._touchMoved) {
++          // Drag release: enable momentum scrolling if the fling was fast
++          const dragSpeed = Math.sqrt(
++            this.dragVelocity.x * this.dragVelocity.x +
++            this.dragVelocity.y * this.dragVelocity.y
++          )
++          if (dragSpeed > 1) {
++            this.isDraggingMomentum = true
+           }
+         }
++
++        this._touchMoved = false
++        this._longPressFired = false
+         this.isDragging = false
+       }
+     })
+ 
++    // Touch cancelled (incoming call, gesture taken over by the OS…)
++    pixiView.addEventListener('touchcancel', (e) => {
++      this._cancelLongPress()
++      this.isDragging = false
++      this.isPinching = false
++      this._touchMoved = true // never turn a cancelled gesture into a click
++      this._longPressFired = false
++    })
++
+     // Right-click: cancel current action + prevent context menu
+     pixiView.addEventListener('contextmenu', (e) => {
+       e.preventDefault()
+@@ -682,4 +766,41 @@ class Mouse {
+   getViewTransform() {
+     return { ...this.viewTransform };
+   }
++
++  /**
++   * Center the camera on a world position, keeping the current zoom.
++   * Used by the minimap tap-to-jump and the mobile camera home button.
++   */
++  jumpToWorld(worldX, worldY) {
++    if (!app.renderer || this.viewTransform.scale == null) return
++
++    const viewWidth = app.renderer.width / this.viewTransform.scale
++    const viewHeight = app.renderer.height / this.viewTransform.scale
++
++    this.viewTransform.x = (worldX - viewWidth / 2) | 0
++    this.viewTransform.y = (worldY - viewHeight / 2) | 0
++
++    this.applyBoundaryConstraints()
++    this.zoomChanged = true
++    drawBack()
++    updateZoom()
++  }
++
++  /**
++   * Recenter the camera on the human player's first tent (mobile home button).
++   * Keeps the current zoom level, unlike setInitialCameraPosition().
++   */
++  recenterOnTent() {
++    if (!app.renderer) return
++
++    const tileSize = getTileSize()
++    const humanTents = gameState.humanPlayer?.getTents()
++    if (humanTents && humanTents.length > 0) {
++      const tent = humanTents[0]
++      this.jumpToWorld(tent.x * tileSize, tent.y * tileSize)
++    } else {
++      const { width: mapWidth, height: mapHeight } = getMapDimensions()
++      this.jumpToWorld(mapWidth * tileSize / 2, mapHeight * tileSize / 2)
++    }
++  }
+ }
+\ No newline at end of file
+diff --git a/js/renderer.mjs b/js/renderer.mjs
+index 4025060..220c784 100644
+--- a/js/renderer.mjs
++++ b/js/renderer.mjs
+@@ -53,6 +53,13 @@ function setupFocusPause() {
+   if (_focusPauseSetup) return
+   _focusPauseSetup = true
+ 
++  // Touch devices: blur/focus events are unreliable on mobile and the
++  // desktop auto-resume behaviour would unpause the game by itself when
++  // the tab regains focus. Mobile uses the visibilitychange handler in
++  // ui.mjs instead (pause on hidden, stay paused until the player taps
++  // "Resume" in the game menu).
++  if (CONSTANTS.UI.IS_TOUCH) return
++
+   const tryPause = () => {
+     if (gameState.gameStatus === 'playing') {
+       gameState.gameStatus = 'paused'
+diff --git a/js/state.mjs b/js/state.mjs
+index 7f7a6af..d568225 100644
+--- a/js/state.mjs
++++ b/js/state.mjs
+@@ -88,14 +88,16 @@ class GameState {
+     this._gameStatus = 'menu' // 'menu', 'initialize', 'playing', 'paused', 'gameOver', 'win'
+     
+     // Game settings
++    // Mobile defaults: small map + 2x speed keep a skirmish inside the 8–12 min window
++    // (menu.mjs reads these values to highlight the default skirmish buttons)
+     this._settings = {
+       difficulty: 'easy',
+       mapSeed: null,
+-      mapSize: 'medium',
++      mapSize: 'small',
+       fogOfWar: true,
+       sfxVolume: 0.8,
+       musicVolume: 0.5,
+-      gameSpeedMultiplier: 1,
++      gameSpeedMultiplier: 2, // = CONSTANTS.GAME_SPEED_MULTIPLIERS.VERY_FAST
+       showHealthBars: true,
+       gameMode: 'classic',
+       antialiasing: false,
+diff --git a/js/ui.mjs b/js/ui.mjs
+index 03100ee..460f92d 100644
+--- a/js/ui.mjs
++++ b/js/ui.mjs
+@@ -6,7 +6,7 @@ export {
+ 
+ 'use strict'
+ 
+-import { playClickSound, playCloseSound, playConfirmSound } from 'audio'
++import { playBuildingSound, playClickSound, playCloseSound, playConfirmSound } from 'audio'
+ import { Building, WorkerBuilding } from 'building'
+ import CONSTANTS from 'constants'
+ import { t, getLanguage } from 'i18n'
+@@ -44,6 +44,12 @@ let currentSpecMode = false
+ let _resourcesChangedHandler = null
+ let _selectedBuildingChangedHandler = null
+ let _gameModeMenuBtnBound = null
++let _confirmBarBound = false
++
++// Touch two-phase placement: tile currently targeted by the ghost building
++// (screen-center tile, snapped to the nearest legal tile)
++let _placement = null
++let _isTouch = false
+ 
+ function getBuildingList() {
+   const all = [
+@@ -603,6 +609,8 @@ function hideBuildingInfoDOM() {
+  * @param {Object} mouseInstance - Mouse controller instance
+  */
+ async function initUI(mouseInstance) {
++  _isTouch = !!CONSTANTS.UI.IS_TOUCH
++
+   if(!mouse) {
+     // Subscribe to state changes
+     gameState.events.on('debug-changed', (value) => {
+@@ -659,6 +667,8 @@ async function initUI(mouseInstance) {
+           } else {
+             hideBuildingInfoDOM()
+           }
++          // Bottom bar height is content-driven on mobile — relayout the canvas
++          if (_isTouch) viewportChange()
+         }
+         gameState.events.on('selected-building-changed', _selectedBuildingChangedHandler)
+ 
+@@ -675,6 +685,7 @@ async function initUI(mouseInstance) {
+         }
+         selectedBuildingType = null
+         selectedBuildingIndex = -1
++        _setBuildMode(false)
+ 
+       } else if (status === 'menu') {
+         playClickSound()
+@@ -686,6 +697,7 @@ async function initUI(mouseInstance) {
+         }
+         selectedBuildingType = null
+         selectedBuildingIndex = -1
++        _setBuildMode(false)
+ 
+         // Show home menu
+         document.getElementById('homeMenu').style.display = 'flex'
+@@ -711,12 +723,41 @@ async function initUI(mouseInstance) {
+   mouse = mouseInstance
+   gameState.UI = { mouse: mouse }
+ 
++  // Bind touch HUD controls once (initUI runs on every game start)
++  if (!_confirmBarBound) {
++    _confirmBarBound = true
++
++    const placeBtn = document.getElementById('build-confirm-place')
++    placeBtn?.addEventListener('click', (e) => {
++      e.stopPropagation()
++      _confirmPlacement()
++      addButtonSparkles(e)
++    })
++
++    const cancelBtn = document.getElementById('build-confirm-cancel')
++    cancelBtn?.addEventListener('click', (e) => {
++      e.stopPropagation()
++      if (selectedBuildingIndex >= 0) {
++        handleBuildingSelect(selectedBuildingIndex) // toggles off
++      }
++    })
++
++    const homeBtn = document.getElementById('camera-home-btn')
++    homeBtn?.addEventListener('click', (e) => {
++      e.stopPropagation()
++      gameState.UI?.mouse?.recenterOnTent()
++    })
++  }
++
+   // Create cursor sprite
+   if (mouse?.sprite) {
+     cursorSprite = new PIXI.Sprite(mouse.sprite)
+     cursorSprite.pivot.set(4.5, 4.5) // Center the cursor
+     containers.ui.addChild(cursorSprite)
+ 
++    // No mouse cursor on touch devices — the finger is the cursor
++    if (_isTouch) cursorSprite.visible = false
++
+     // Start dedicated cursor update loop
+     updateCursor()
+   }
+@@ -786,6 +827,16 @@ function recreateUIElements() {
+  */
+ function setupEventListeners() {
+ 
++  // Mobile lifecycle: leaving the page (home button, tab switch, lock screen)
++  // pauses the game and shows the game menu — returning to the foreground
++  // stays paused until the player taps "Resume". (Desktop keeps the
++  // focus/blur auto-pause defined in renderer.mjs.)
++  document.addEventListener('visibilitychange', () => {
++    if (document.hidden && gameState.gameStatus === 'playing') {
++      openGameMenu()
++    }
++  })
++
+   // Keyboard shortcuts
+   window.addEventListener('keypress', (event) => {
+     // Don't prevent default if user is typing in an input field
+@@ -924,8 +975,9 @@ function handleMouseInteraction(map, player) {
+   if (selectedBuildingType) {
+     updateBuildingPreview()
+ 
+-    // Handle mouse click to place building
+-    if (mouse?.clicked) {
++    // Handle mouse click to place building (desktop path).
++    // Touch devices place through the build-confirm bar instead.
++    if (mouse?.clicked && !_isTouch) {
+       // Check if player can afford the building
+       if (isValidPlacement && player.canAffordBuilding(selectedBuildingType)) {
+         // Create the building
+@@ -1073,6 +1125,7 @@ function handleBuildingSelect(index) {
+       buildingPreviewSprite.parent.removeChild(buildingPreviewSprite)
+       buildingPreviewSprite = null
+     }
++    _setBuildMode(false)
+     _refreshSlotAffordability()
+     return
+   }
+@@ -1099,6 +1152,111 @@ function handleBuildingSelect(index) {
+     selectedBuildingType = null
+     _refreshSlotAffordability()
+   }
++
++  // Touch: entering build mode swaps the slot bar for the confirm bar
++  _setBuildMode(_isTouch && !!selectedBuildingType)
++}
++
++/**
++ * Toggle the mobile build-confirm mode and relayout the canvas if the
++ * bottom bar height changed.
++ */
++function _setBuildMode(on) {
++  const was = document.body.classList.contains('build-mode')
++  document.body.classList.toggle('build-mode', !!on)
++  if (was !== !!on) viewportChange()
++}
++
++/**
++ * Tile targeted by the ghost building.
++ * Desktop: the tile under the mouse. Touch: the tile under the screen
++ * center — the player pans the map under a fixed ghost, so the finger
++ * never covers the placement spot.
++ */
++function _getPlacementGridCoords() {
++  if (!_isTouch || !mouse || !app.renderer) {
++    return { x: mouse?.x, y: mouse?.y }
++  }
++  const vt = mouse.getViewTransform()
++  const worldX = (app.renderer.width / 2) / vt.scale + vt.x
++  const worldY = (app.renderer.height / 2) / vt.scale + vt.y
++  const ts = getTileSize()
++  const { width: mw, height: mh } = getMapDimensions()
++  return {
++    x: Math.max(0, Math.min(mw - 1, Math.floor(worldX / ts))),
++    y: Math.max(0, Math.min(mh - 1, Math.floor(worldY / ts)))
++  }
++}
++
++/**
++ * Search outward from the given tile for the nearest legal placement tile
++ * (touch only, radius ≤ 4). Returns null if none is found nearby.
++ */
++function _findNearestValidTile(cx, cy) {
++  if (isValidBuildingPosition(cx, cy)) return { x: cx, y: cy }
++  const { width: mw, height: mh } = getMapDimensions()
++  for (let r = 1; r <= 4; r++) {
++    for (let dx = -r; dx <= r; dx++) {
++      for (let dy = -r; dy <= r; dy++) {
++        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue // ring cells only
++        const nx = cx + dx
++        const ny = cy + dy
++        if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) continue
++        if (isValidBuildingPosition(nx, ny)) return { x: nx, y: ny }
++      }
++    }
++  }
++  return null
++}
++
++/**
++ * Refresh the mobile build-confirm bar: button state + single-line reason.
++ */
++function _updateConfirmBar() {
++  if (!_isTouch || !selectedBuildingType) return
++  const placeBtn = document.getElementById('build-confirm-place')
++  const statusEl = document.getElementById('build-confirm-status')
++  if (!placeBtn) return
++
++  const player = gameState.humanPlayer
++  const name = selectedBuildingType.key ? t(`buildings.${selectedBuildingType.key}.name`) : selectedBuildingType.name
++  const costs = player?.getBuildingCost(selectedBuildingType)
++  const costText = costs ? Object.entries(costs).map(([r, a]) => `${r}: ${a}`).join(', ') : ''
++  const canAfford = !!player?.canAffordBuilding(selectedBuildingType)
++
++  placeBtn.disabled = !(isValidPlacement && canAfford)
++
++  let statusText
++  if (!canAfford) {
++    statusText = t('ui.cannotAfford', { name, costs: costText })
++  } else if (!isValidPlacement) {
++    statusText = t('ui.invalidPosition')
++  } else {
++    statusText = `${name} · ${costText}`
++  }
++  if (statusEl && statusEl.textContent !== statusText) {
++    statusEl.textContent = statusText
++  }
++}
++
++/**
++ * Touch "Place" button: build at the ghost tile (screen center, snapped).
++ */
++function _confirmPlacement() {
++  if (!selectedBuildingType || !_placement) return
++  const player = gameState.humanPlayer
++  if (!isValidPlacement || !player?.canAffordBuilding(selectedBuildingType)) return
++
++  player.addBuilding(_placement.x, _placement.y, selectedBuildingType)
++  playBuildingSound()
++
++  const placedName = selectedBuildingType.key ? t(`buildings.${selectedBuildingType.key}.name`) : selectedBuildingType.name
++  showDebugMessage(t('ui.placed', { name: placedName }))
++
++  if (selectedBuildingIndex >= 0) {
++    handleBuildingSelect(selectedBuildingIndex) // toggles off
++  }
++  drawBack()
+ }
+ 
+ // ── Building placement preview ─────────────────────────────────
+@@ -1146,12 +1304,16 @@ function isValidBuildingPosition(x, y) {
+ }
+ 
+ /**
+- * Draw a building sprite preview following the mouse cursor.
++ * Draw a building sprite preview.
++ * Desktop: the ghost follows the mouse cursor.
++ * Touch: the ghost stays at the screen-center tile and snaps to the
++ * nearest legal tile, so the player positions it by panning the map.
+  */
+ async function updateBuildingPreview() {
+   if (!selectedBuildingType || !mouse) return
+ 
+   const viewTransform = gameState.UI?.mouse?.getViewTransform()
++  if (!viewTransform) return
+ 
+   // Create preview sprite if it doesn't exist
+   if (!buildingPreviewSprite) {
+@@ -1163,15 +1325,34 @@ async function updateBuildingPreview() {
+     containers.ui.addChild(buildingPreviewSprite)
+   }
+ 
+-  // Check if the current position is valid
+-  isValidPlacement = isValidBuildingPosition(mouse.x, mouse.y)
++  // Resolve the targeted tile
++  const coords = _getPlacementGridCoords()
++  let placeX = coords.x
++  let placeY = coords.y
++
++  if (_isTouch) {
++    // Snap to the nearest legal tile around the screen center
++    const snapped = (Number.isInteger(placeX) && Number.isInteger(placeY))
++      ? _findNearestValidTile(placeX, placeY)
++      : null
++    isValidPlacement = !!snapped
++    if (snapped) {
++      placeX = snapped.x
++      placeY = snapped.y
++    }
++  } else {
++    isValidPlacement = Number.isInteger(placeX) && Number.isInteger(placeY) &&
++      isValidBuildingPosition(placeX, placeY)
++  }
++
++  _placement = { x: placeX, y: placeY }
+ 
+   // Update preview position
+   const tileSize = getTileSize()
+ 
+   // Convert grid coordinates to world coordinates (center of the tile)
+-  const worldX = (mouse.x * tileSize) + (tileSize / 2)
+-  const worldY = (mouse.y * tileSize) + (tileSize / 2)
++  const worldX = (placeX * tileSize) + (tileSize / 2)
++  const worldY = (placeY * tileSize) + (tileSize / 2)
+ 
+   // Convert world coordinates to screen coordinates (with zoom)
+   const screenX = (worldX - viewTransform.x) * viewTransform.scale
+@@ -1187,6 +1368,8 @@ async function updateBuildingPreview() {
+ 
+   // Set alpha for better visibility
+   buildingPreviewSprite.alpha = 0.7
++
++  _updateConfirmBar()
+ }
+ 
+ // ── Sparkles ───────────────────────────────────────────────────
+@@ -1339,7 +1522,9 @@ function handleExportMap() {
+ const showDebugMessage = async (message) => {
+   const debugElement = document.createElement('div')
+   debugElement.style.position = 'fixed'
+-  debugElement.style.bottom = `${CONSTANTS.UI.BOTTOM_BAR_HEIGHT + 8}px`
++  // Sit above the real bottom bar (its height is dynamic on mobile)
++  const barH = document.getElementById('game-bottom-bar')?.offsetHeight || CONSTANTS.UI.BOTTOM_BAR_HEIGHT
++  debugElement.style.bottom = `${barH + 8}px`
+   debugElement.style.right = '16px'
+   debugElement.style.backgroundColor = 'rgba(0,0,0,0.75)'
+   debugElement.style.color = '#fff'
+diff --git a/locales/de.json b/locales/de.json
+index 7d954a5..2299165 100644
+--- a/locales/de.json
++++ b/locales/de.json
+@@ -178,6 +178,9 @@
+     }
+   },
+   "ui": {
++    "place": "Platzieren",
++    "invalidPosition": "Hier kann nicht gebaut werden",
++    "centerOnBase": "Auf Basis zentrieren",
+     "life": "Leben",
+     "producing": "Produktion",
+     "workers": "Arbeiter",
+diff --git a/locales/en.json b/locales/en.json
+index 3288a31..d8c4c79 100644
+--- a/locales/en.json
++++ b/locales/en.json
+@@ -178,6 +178,9 @@
+     }
+   },
+   "ui": {
++    "place": "Place",
++    "invalidPosition": "You can't build there",
++    "centerOnBase": "Center on base",
+     "life": "Life",
+     "producing": "Producing",
+     "workers": "Workers",
+diff --git a/locales/es.json b/locales/es.json
+index 83d809a..bc3300e 100644
+--- a/locales/es.json
++++ b/locales/es.json
+@@ -178,6 +178,9 @@
+     }
+   },
+   "ui": {
++    "place": "Colocar",
++    "invalidPosition": "No se puede construir aquí",
++    "centerOnBase": "Centrar en la base",
+     "life": "Vida",
+     "producing": "Produciendo",
+     "workers": "Trabajadores",
+diff --git a/locales/fr.json b/locales/fr.json
+index a50afca..e7bdf97 100644
+--- a/locales/fr.json
++++ b/locales/fr.json
+@@ -178,6 +178,9 @@
+     }
+   },
+   "ui": {
++    "place": "Placer",
++    "invalidPosition": "Impossible de construire ici",
++    "centerOnBase": "Centrer sur la base",
+     "life": "Vie",
+     "producing": "Production",
+     "workers": "Ouvriers",
+diff --git a/play.html b/play.html
+index c072042..7724800 100644
+--- a/play.html
++++ b/play.html
+@@ -111,8 +111,6 @@
+ 
+   <script type="module" src="js/index.mjs"></script>
+ 
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+ 
+ <body>
+@@ -215,6 +213,11 @@
+   <div id="game-bottom-bar">
+     <div id="building-slots-panel"></div>
+     <div id="building-info-panel"></div>
++    <div id="build-confirm-bar">
++      <span id="build-confirm-status"></span>
++      <button id="build-confirm-cancel" type="button" data-i18n="skirmish.cancel">Cancel</button>
++      <button id="build-confirm-place" type="button" data-i18n="ui.place" disabled>Place</button>
++    </div>
+   </div>
+ 
+   <!-- Custom tooltip shown over slots on hover -->
+@@ -222,6 +225,7 @@
+ 
+   <div id="minimap-container">
+     <canvas id="minimap-canvas"></canvas>
++    <button id="camera-home-btn" title="Center on base" data-i18n-title="ui.centerOnBase">⌂</button>
+     <button id="minimap-toggle" title="Toggle minimap"><span class="minimap-toggle-icon">⇑</span></button>
+   </div>
+ 
