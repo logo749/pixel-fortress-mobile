@@ -1,0 +1,299 @@
+diff --git a/css/game-ui.css b/css/game-ui.css
+index d7f6b31..b11ab7e 100644
+--- a/css/game-ui.css
++++ b/css/game-ui.css
+@@ -654,16 +654,110 @@ body.minimap-minimized #objectives-panel {
+   color: #fff;
+ }
+ 
++/* ── Build confirm bar (mobile two-phase placement) ──────────── */
++/* On touch devices the ghost building snaps to the tile under the
++   screen center; these two buttons confirm or cancel the placement. */
++
++#build-confirm-bar {
++  display: none;
++  flex: 1;
++  align-items: center;
++  justify-content: center;
++  gap: 8px;
++  padding: 6px;
++  flex-wrap: wrap;
++}
++
++body.build-mode #build-confirm-bar {
++  display: flex;
++}
++
++body.build-mode #building-slots-panel {
++  display: none;
++}
++
++body.build-mode #building-info-panel {
++  display: none !important;
++}
++
++.bcb-btn {
++  background: rgba(0, 100, 0, 0.85);
++  border: 2px solid rgba(255, 215, 0, 0.9);
++  border-radius: 6px;
++  color: #fff;
++  font-family: system-ui, sans-serif;
++  font-size: 15px;
++  font-weight: bold;
++  cursor: pointer;
++  padding: 10px 18px;
++  min-width: 120px;
++  height: 46px;
++}
++
++.bcb-btn:active {
++  background: rgba(34, 139, 34, 0.95);
++}
++
++.bcb-btn:disabled {
++  opacity: 0.4;
++  cursor: not-allowed;
++}
++
++.bcb-cancel {
++  background: rgba(80, 80, 80, 0.85);
++  border-color: rgba(180, 180, 180, 0.8);
++}
++
++.bcb-status {
++  flex-basis: 100%;
++  text-align: center;
++  color: #FFD700;
++  font-size: 12px;
++  font-family: system-ui, sans-serif;
++  min-height: 14px;
++  line-height: 1.2;
++}
++
++/* ── Camera home button (mobile) ─────────────────────────────── */
++
++#camera-home-btn {
++  position: absolute;
++  left: -46px;
++  bottom: 0;
++  width: 40px;
++  height: 40px;
++  background: rgba(17, 70, 17, 0.85);
++  border: 1px solid rgba(255, 215, 0, 0.6);
++  border-radius: 6px;
++  color: #FFD700;
++  font-size: 20px;
++  line-height: 1;
++  cursor: pointer;
++  display: none;
++  align-items: center;
++  justify-content: center;
++}
++
++#camera-home-btn:active {
++  background: rgba(34, 139, 34, 0.95);
++}
++
+ /* ── Mobile ───────────────────────────────────────────────────── */
+ 
+ @media (max-width: 600px), (max-height: 600px) {
++  /* Bottom bar height is content-driven: it grows when the building
++     info panel (long-press) or the build confirm bar opens. The real
++     height is published to the canvas layout via --hud-bottom. */
+   #game-bottom-bar {
+-    height: 56px;
++    height: auto;
++    min-height: 56px;
++    align-items: center;
+   }
+ 
+   #building-slots-panel {
+     padding: 4px;
+     gap: 4px;
++    min-height: 56px;
+   }
+ 
+   .building-slot {
+@@ -686,8 +780,8 @@ body.minimap-minimized #objectives-panel {
+   }
+ 
+   #minimap-container {
+-    width: 172px;
+-    height: 172px;
++    width: 150px;
++    height: 150px;
+   }
+ 
+   body.minimap-minimized #minimap-container {
+@@ -695,6 +789,10 @@ body.minimap-minimized #objectives-panel {
+     height: 86px;
+   }
+ 
++  #camera-home-btn {
++    display: flex;
++  }
++
+   #objectives-panel {
+     top: 31px;
+     left: -1px;
+@@ -709,7 +807,61 @@ body.minimap-minimized #objectives-panel {
+     max-height: calc(100dvh - 33px - 56px);
+   }
+ 
++  /* Building info panel (long-press details) — stacked, readable rows */
++  #building-info-panel {
++    flex-wrap: wrap;
++    padding: 6px 8px;
++    row-gap: 4px;
++    align-content: flex-start;
++  }
++
++  .bi-icon {
++    width: 36px;
++    height: 36px;
++  }
++
++  .bi-main {
++    flex-basis: calc(100% - 48px);
++    min-width: 0;
++  }
++
++  .bi-desc {
++    font-size: 12px;
++  }
++
++  .bi-actions {
++    margin-left: 0;
++    flex-wrap: wrap;
++    row-gap: 4px;
++    padding: 0;
++  }
++
++  .bi-btn {
++    height: 48px;
++    min-width: 96px;
++    max-width: none;
++    font-size: 11px;
++  }
++
++  .bi-btn-title {
++    font-size: 13px;
++  }
++
++  .bi-btn-sub,
++  .bi-btn-cost-item {
++    font-size: 10px;
++  }
++
++  .bi-btn-icon {
++    width: 24px;
++    height: 24px;
++  }
++
++  .bi-back-btn {
++    height: 48px;
++  }
++
+   #narrative-box {
+-    bottom: 64px; /* 56px bottom bar + 8px gap */
++    bottom: calc(var(--hud-bottom, 56px) + 8px);
+   }
+ }
+diff --git a/css/menu.css b/css/menu.css
+index c1e9d80..88e97c6 100644
+--- a/css/menu.css
++++ b/css/menu.css
+@@ -104,8 +104,9 @@ body.playing-mode {
+ }
+ 
+ body.playing-mode #canvas {
+-  top: 32px;
+-  height: calc(100dvh - 32px - 72px);
++  /* HUD bar heights are published by dimensions.mjs as CSS variables */
++  top: var(--hud-top, 32px);
++  height: calc(100dvh - var(--hud-top, 32px) - var(--hud-bottom, 72px));
+ }
+ 
+ #stats {
+@@ -274,6 +275,6 @@ body.playing-mode #canvas {
+ 
+ @media (max-width: 600px), (max-height: 600px) {
+   body.playing-mode #canvas {
+-    height: calc(100dvh - 32px - 56px);
++    height: calc(100dvh - var(--hud-top, 32px) - var(--hud-bottom, 56px));
+   }
+ }
+\ No newline at end of file
+diff --git a/de/index.html b/de/index.html
+index a128742..3687e09 100644
+--- a/de/index.html
++++ b/de/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+ <body>
+   <!-- Navigation Bar (Sticky) -->
+diff --git a/es/index.html b/es/index.html
+index 455cb25..4929aee 100644
+--- a/es/index.html
++++ b/es/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+ <body>
+   <!-- Navigation Bar (Sticky) -->
+diff --git a/fr/index.html b/fr/index.html
+index 2c8a74c..acc6935 100644
+--- a/fr/index.html
++++ b/fr/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="../favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+ <body>
+   <!-- Navigation Bar (Sticky) -->
+diff --git a/index.html b/index.html
+index 42c3033..09f76b5 100644
+--- a/index.html
++++ b/index.html
+@@ -78,9 +78,6 @@
+ 
+   <!-- Favicon -->
+   <link rel="icon" type="image/png" href="favicon.png">
+-
+-  <!-- Analytics -->
+-  <script defer src="https://pixelfortress-analytics.0xdba.dev/script.js" data-website-id="98186ad7-063c-4852-bc7e-7cb0b60de48f"></script>
+ </head>
+ <body>
+   <!-- Navigation Bar (Sticky) -->
+diff --git a/js/audio.mjs b/js/audio.mjs
+index 253dc44..32ace1b 100644
+--- a/js/audio.mjs
++++ b/js/audio.mjs
+@@ -27,9 +27,12 @@ const buildingSound = new Audio('assets/sounds/Chest Close 2.ogg')
+ 
+ /* Ambient */
+ const forestDayAmbient = new Audio('assets/sounds/Forest Day.ogg')
++// Mobile: don't let the browser prefetch big audio blobs — they stream on first play()
++forestDayAmbient.preload = 'none'
+ 
+ /* Music */
+ const sonatina_letsadventure_3ToArms = new Audio('assets/music/sonatina_letsadventure_3ToArms.ogg')
++sonatina_letsadventure_3ToArms.preload = 'none'
+ 
+ // Initialize volumes from gameState
+clickSound.volume = gameState.sfxVolume
